@@ -1,0 +1,256 @@
+---
+title: "Sales Data Analysis using R Studio"
+author: "Caleb Kiplangat"
+date: "2025-06-28"
+output:
+  pdf_document: default
+  html_document: default
+---
+ **1.Loading Required Packages**
+```{r}
+library(tidyverse)     # For data manipulation and visualization
+library(lubridate)     # For working with dates
+library(caret)         # For machine learning modeling
+library(ggplot2)       # For plotting
+library(cluster)       # For clustering
+library(forecast)      # For time series forecasting
+library(readr)         # For reading CSV files
+
+```
+
+**2.Loading the Dataset**
+```{r}
+# Set working directory or use relative path
+sales_data <- read_csv("C:/Users/NEPHIC  840G3/Desktop/FYJ/DATA_ANALYSIS FILES/sales_data.csv")
+
+# Preview the data
+glimpse(sales_data)
+summary(sales_data)
+
+```
+**3.Data Cleaning and Transformation**
+```{r}
+# Convert Sale_Date to Date format
+sales_data <- sales_data %>%
+  mutate(Sale_Date = dmy(Sale_Date))
+
+# Create Profit and Profit_Margin
+sales_data <- sales_data %>%
+  mutate(
+    Profit = (Unit_Price - Unit_Cost) * Quantity_Sold,
+    Profit_Margin = Profit / Sales_Amount
+  )
+```
+**4. Exploratory Data Analysis (EDA)**
+
+**Total Sales by Region**
+```{r}
+# Total sales by region
+sales_data %>%
+  group_by(Region) %>%
+  summarise(Total_Sales = sum(Sales_Amount)) %>%
+  ggplot(aes(x = reorder(Region, -Total_Sales), y = Total_Sales, fill = Region)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Total Sales by Region", x = "Region", y = "Sales Amount")
+
+```
+**Interpretation: Total Sales by Region**
+The bar chart above summarizes total sales across all regions in the dataset.
+Each bar represents a region.
+The height of the bar reflects the cumulative sales amount from that region.
+Regions are reordered from highest to lowest sales, so you can quickly see which regions are top performers.
+
+**Key Takeaways:**
+The region at the far left of the chart is the top-performing region in terms of total sales.
+The differences in bar heights reveal how sales are distributed — if a few regions have much taller bars, it suggests sales are concentrated in specific areas.
+Regions with shorter bars may be underperforming or represent smaller markets.
+
+**Recommendation:**
+Investigate why top regions are performing better — is it due to stronger reps, more customers, or product mix?
+For lower-performing regions, consider targeted strategies like discounts, rep training, or more product availability to boost sales.
+Use this insight to guide resource allocation and regional marketing plans
+
+**Daily Sales Trend**
+```{r}
+# Sales trend over time
+sales_data %>%
+  group_by(Sale_Date) %>%
+  summarise(Daily_Sales = sum(Sales_Amount)) %>%
+  ggplot(aes(x = Sale_Date, y = Daily_Sales)) +
+  geom_line(color = "blue") +
+  theme_minimal() +
+  labs(title = "Daily Sales Trend", x = "Date", y = "Sales Amount")
+```
+**Interpretation: Daily Sales Trend**
+The line chart above shows how total sales have changed over time, based on the Sale_Date column.
+The x-axis represents dates (chronological order).
+The y-axis shows the total sales made on each day.
+The blue line connects daily sales amounts, making it easier to spot patterns, spikes, or drops over time.
+
+**Key Insights:**
+Rising segments of the line indicate days where sales increased.
+Sharp dips may point to low-activity days — possibly weekends, holidays, or stock shortages.
+Consistent peaks may suggest strong performance on specific days or promotional cycles.
+A flat line or downward trend over a long period could be a concern worth investigating.
+
+**Recommendations:**
+Identify dates with peak sales and examine what may have caused the spike — promotions, product launches, or high-demand periods.
+Look into low-sales periods and check for issues like downtime, supply delays, or reduced demand.
+Use these trends to support sales planning and forecasting — especially to prepare for high-demand days and optimize staffing or inventory.
+
+**5.Hypothesis Testing**
+
+**Hypothesis 1: Discounts significantly increase Sales Amount**
+
+Hypothesis Statement:
+
+**Null (H₀)**: There is no significant difference in sales between transactions with and without a discount.
+
+**Alternative (H₁)**: Transactions with a discount have significantly different sales than those without
+```{r}
+# Create two groups: with and without discount
+sales_data <- sales_data %>%
+  mutate(Has_Discount = ifelse(Discount > 0, "Yes", "No"))
+
+# Run t-test
+t_test_result <- t.test(Sales_Amount ~ Has_Discount, data = sales_data)
+print(t_test_result)
+
+```
+**Results Summary:**
+Group Means:
+
+No Discount: 4,511.50
+
+With Discount: 5,027.52
+
+t-statistic: -0.81
+
+Degrees of Freedom: ~15.6
+
+p-value: 0.4326
+
+95% Confidence Interval for the Difference in Means: [-1876.56, 844.51]
+
+ **Interpretation:**
+
+The p-value (0.4326) is much greater than the typical threshold of 0.05.
+
+This means the observed difference in average sales between discounted and non-discounted transactions is not statistically significant.
+
+The confidence interval includes zero, which further supports that there's no strong evidence of a difference.
+
+**Conclusion:**
+
+There is no statistically significant difference in average sales between transactions with and without a discount in your dataset.
+
+**Hypothesis 2: Average sales differ significantly across regions**
+
+Hypothesis Statement:
+
+**Null (H₀)**: All regions have the same average sales amount
+
+**Alternative (H₁)**: At least one region has a different average sales amount
+```{r}
+# One-way ANOVA
+anova_result <- aov(Sales_Amount ~ Region, data = sales_data)
+summary(anova_result)
+
+# Optional: Post-hoc test to see which regions differ
+TukeyHSD(anova_result)
+
+```
+**ANOVA Results**
+Term	Df	Sum Sq	Mean Sq	F value	Pr(>F)
+Region	3	19,310,000	6,435,087	0.794	0.498
+Residual	996	8,077,000,000	8,109,242		
+
+**p-value**: 0.498 — this is much greater than 0.05
+
+**F value**: 0.794 — shows weak between-group variance compared to within-group variance
+
+ **Interpretation:**
+
+There is no statistically significant difference in average sales amounts across the regions. The variation in sales within regions is far greater than the variation between them.
+
+**Tukey Post-Hoc Results Interpretation**
+
+None of the pairwise regional comparisons show a statistically significant difference in mean sales.
+
+All confidence intervals include 0, and adjusted p-values are much higher than 0.05.
+
+This confirms what ANOVA already indicated — regional differences in average sales are not meaningful.
+
+**Conclusion:**
+
+There's no strong evidence that any region outperforms others significantly in terms of average sales.
+
+The difference in sales across regions is not statistically meaningful based on this dataset.
+
+**6. Predictive Modeling: Regression**
+
+```{r}
+# Linear regression model to predict Sales_Amount
+model_data <- sales_data %>%
+  select(Sales_Amount, Quantity_Sold, Unit_Cost, Unit_Price, Discount)
+
+model <- lm(Sales_Amount ~ ., data = model_data)
+summary(model)
+```
+**Model Statistics:**
+
+**Multiple R-squared: 0.0029**
+
+→ The model explains only 0.29% of the variation in Sales_Amount, which is extremely low.
+
+**Adjusted R-squared: -0.0011**
+
+→ After adjusting for number of predictors, the model does worse than a horizontal average line.
+
+**F-statistic p-value: 0.574**
+
+→ The model is not statistically significant overall.
+
+**Interpretation:**
+
+None of the individual predictors significantly explain changes in Sales_Amount.
+
+The overall model does not provide useful predictive power.
+
+This suggests that other unmeasured factors are likely driving sales — not just quantity, price, cost, or discount.
+
+**7. Time Series Forecasting**
+```{r}
+# Aggregate by date
+ts_data <- sales_data %>%
+  group_by(Sale_Date) %>%
+  summarise(Total_Sales = sum(Sales_Amount))
+
+# Convert to time series object
+sales_ts <- ts(ts_data$Total_Sales, frequency = 7)
+
+# Fit ARIMA model
+fit <- auto.arima(sales_ts)
+forecasted <- forecast(fit, h = 30)
+
+# Plot forecast
+autoplot(forecasted) +
+  labs(title = "30-Day Sales Forecast", y = "Sales", x = "Time")
+
+```
+**How to interpret the forecast plot:**
+
+**Forecasted line:** This shows the predicted total sales for each day in the next 30 days based on past sales trends.
+
+**Confidence intervals (usually shaded area):** These bands give a range where the true sales values are expected to fall with a certain probability (usually 80% and 95% intervals). Wider bands mean more uncertainty.
+
+**Pattern insights:**
+
+If the forecasted line is increasing, it suggests sales are expected to rise.
+
+If it’s flat or decreasing, sales are expected to stay steady or drop.
+
+**Model fit:** The ARIMA model accounts for trends, seasonality (weekly), and noise in your data to make these predictions.
+
+

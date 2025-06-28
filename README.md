@@ -14,3 +14,5 @@ I worked on Sales dataset from Kaggle using R Studio and here is a quick overvie
   -Visualized the forecast to highlight expected sales trends and uncertainty
  
   -Drawing conclusions and summarizing insights from the analysis
+
+This analysis helps provide actionable insights for better sales planing and decision-making. It's always rewarding to turn raw data into clear, data-driven recommendations.
